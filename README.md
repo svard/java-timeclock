@@ -1,2 +1,2 @@
 # java-timeclock
-Manage work time
+Spring Boot application with Elm frontend.

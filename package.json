@@ -10,14 +10,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/svard/timeclock.git"
+    "url": "git+https://github.com/svard/java-timeclock.git"
   },
   "author": "Kristofer Svärd",
   "license": "EPL-1.0",
   "bugs": {
-    "url": "https://github.com/svard/timeclock/issues"
+    "url": "https://github.com/svard/java-timeclock/issues"
   },
-  "homepage": "https://github.com/svard/timeclock#readme",
+  "homepage": "https://github.com/svard/java-timeclock#readme",
   "dependencies": {
     "blaze": "^3.0.0",
     "css-loader": "^0.25.0",
