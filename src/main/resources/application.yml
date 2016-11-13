@@ -1,0 +1,18 @@
+logging:
+  file: "/var/log/timeclock.log"
+  level:
+    root: INFO
+    net:
+      svard: DEBUG
+
+spring:
+  data:
+    mongodb:
+      host: "192.168.0.108"
+      port: 27017
+      database: "worktime_manager"
+  thymeleaf:
+    cache: false
+
+server:
+  port: 8086

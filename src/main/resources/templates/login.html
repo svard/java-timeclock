@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+	<meta charset="UTF-8"></meta>
+	<meta name="viewport" content="width=device-width, initial-scale=1"></meta>
+	<title>Login</title>
+</head>
+<body class="c-text">
+	<nav class="c-nav c-nav--inline u-high tc-ericsson-blue">
+		<span class="c-nav__item">Timeclock</span>
+	</nav>
+	<main class="u-center-block tc-login-content">
+		<div class="u-center-block__content">
+			<h1 class="c-heading">Ericsson Timereport</h1>
+			<form th:action="@{/login}" method="POST">
+				<div class="o-form-element">
+					<div class="c-input-group c-input-group--stacked">
+						<div class="o-field">
+							<input class="c-field" placeholder="Username" name="username" />
+						</div>
+						<div class="o-field">
+							<input class="c-field" type="password" placeholder="Password" name="password" />
+						</div>
+					</div>
+				</div>
+				<div class="o-form-element">
+					<button class="c-button tc-ericsson-blue c-button--block" type="submit">Login</button>
+				</div>
+			</form>
+		</div>
+	</main>
+	<script src="js/compiled/login.js"></script>
+</body>
+</html>
