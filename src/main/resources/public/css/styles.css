@@ -1,0 +1,52 @@
+/*:root {
+    font-family: sans-serif;
+}*/
+
+.tc-ericsson-blue {
+    background-color: #00285e;
+}
+
+.tc-underline {
+    border-bottom: 1px solid #eee;
+}
+
+.tc-table-header {
+    text-align: center;
+}
+
+.tc-secondary-header {
+    font-size: 0.65em;
+    margin-left: 0.65em;
+}
+
+.tc-sum-row {
+    border-top: 1px solid #eee;
+}
+
+.tc-color-band {
+    max-width: 15px;
+}
+
+.tc-nav-buttons {
+    margin-top: 12px;
+    text-align: center;
+}
+
+.tc-nav-buttons > button {
+    margin-right: 1em;
+}
+
+.tc-button-icon {
+    padding: 0 1em;
+}
+
+.tc-app-link {
+    background-color: transparent;
+    color: #fff;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.tc-login-content {
+    height: 400px;
+}

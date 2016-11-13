@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+	<meta charset="UTF-8"></meta>
+	<meta name="viewport" content="width=device-width, initial-scale=1"></meta>
+	<title>Timeclock</title>
+</head>
+
+<body class="c-text">
+	<nav class="c-nav c-nav--inline u-high tc-ericsson-blue">
+		<a class="c-nav__item tc-app-link" href="#main">Timeclock</a>
+		<a class="c-nav__item tc-app-link" href="#statistics">Statistics</a>
+		<a class="c-nav__item c-nav__item--right tc-app-link" th:href="@{/logout}">Logout</a>
+	</nav>
+	<div id="app"></div>
+	<script src="js/compiled/index.js"></script>
+</body>
+
+</html>
