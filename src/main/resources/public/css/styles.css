@@ -50,3 +50,15 @@
 .tc-login-content {
     height: 400px;
 }
+
+.tc-calendar-modal {
+    position: relative;
+}
+
+.tc-calendar-modal > div {
+    width: auto;
+}
+
+.tc-calendar-modal-button {
+    width: 100%;
+}

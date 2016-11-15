@@ -47,11 +47,14 @@ parser location =
 
 init : Navigation.Location -> ( Model, Cmd Msg )
 init _ =
-    { route = MainRoute
-    , timeclock = Timeclock.initialModel
-    , statistics = Statistics.initialModel
-    }
-        ! [ Navigation.newUrl "#main" ]
+    let 
+        ( mModel, mCmd ) = Timeclock.initialModel
+    in
+        { route = MainRoute
+        , timeclock = mModel
+        , statistics = Statistics.initialModel
+        }
+            ! [ Navigation.newUrl "#main", Cmd.map MainPage mCmd ]
 
 
 view : Model -> Html.Html Msg

@@ -1,6 +1,6 @@
 {
   "name": "timeclock",
-  "version": "2.0.0",
+  "version": "2.0.5",
   "description": "Manage work time",
   "main": "src/js/index.js",
   "scripts": {

@@ -3,6 +3,10 @@ module Timeclock exposing (Msg, Model, initialModel, initDate, view, update)
 import Html exposing (..)
 import Html.Attributes as Attr exposing (..)
 import Html.Events exposing (..)
+
+
+-- import Html.App
+
 import Dom
 import List
 import Date exposing (Date)
@@ -11,6 +15,7 @@ import Task
 import Http
 import Json.Decode exposing (field)
 import Json.Encode
+import Widgets.Calendar as Calendar
 
 
 type alias ID =
@@ -39,6 +44,8 @@ type alias Report =
 type alias Model =
     { selectedDate : Date
     , reports : List Report
+    , calendar : Calendar.Model
+    , modalVisible : Bool
     }
 
 
@@ -57,13 +64,22 @@ type Msg
     | Save ID ( Bool, Bool )
     | PutReport (Result Http.Error ())
     | Focus (Result Dom.Error ())
+    | Calendar Calendar.Msg
+    | ToggleModal
 
 
-initialModel : Model
+initialModel : ( Model, Cmd Msg )
 initialModel =
-    { selectedDate = Date.fromTime 0
-    , reports = []
-    }
+    let
+        ( cModel, cCmd ) =
+            Calendar.initialModel
+    in
+        { selectedDate = Date.fromTime 0
+        , reports = []
+        , calendar = cModel
+        , modalVisible = False
+        }
+            ! [ Cmd.map Calendar cCmd ]
 
 
 
@@ -83,6 +99,7 @@ view model =
             [ text <| "Week " ++ (weekYear model.selectedDate) ]
         , tableView model
         , navButtonView
+        , calendarModal model
         ]
 
 
@@ -225,10 +242,56 @@ navButtonView =
             [ i [ class "fa fa-chevron-left tc-button-icon" ] [] ]
         , button
             [ class "c-button c-button--rounded c-button--ghost-primary c-button--small u-high"
+            , onClick ToggleModal
+            ]
+            [ i [ class "fa fa-calendar tc-button-icon" ] [] ]
+        , button
+            [ class "c-button c-button--rounded c-button--ghost-primary c-button--small u-high"
             , onClick IncrementWeek
             ]
             [ i [ class "fa fa-chevron-right tc-button-icon" ] [] ]
         ]
+
+
+calendarModal : Model -> Html Msg
+calendarModal model =
+    let
+        boolToDisplay bool =
+            if bool then "block" else "none" 
+    in
+        div
+            [ class "o-grid"
+            , style [ ("display", boolToDisplay model.modalVisible ) ] ]
+            [ div [ class "c-overlay" ] []
+            , div 
+                [ class "o-grid__cell tc-calendar-modal" ]
+                [ div
+                    [ class "o-modal u-higher" ]
+                    [ div 
+                        [ class "c-card" ]
+                        [ header 
+                            [ class "c-card__header" ]
+                            [ button 
+                                [ class "c-button c-button--close" 
+                                , onClick ToggleModal
+                                ] 
+                                [ text "×" ]
+                            , h2 [ class "c-heading" ] [ text "Select week" ] ]
+                        , div 
+                            [ class "c-card__body" ]
+                            [ Html.map Calendar (Calendar.view model.calendar) ]
+                        , footer 
+                            [ class "c-card__footer" ]
+                            [ button 
+                                [ class "c-button c-button--brand modal tc-calendar-modal-button"
+                                , onClick ToggleModal
+                                ] 
+                                [ text "Close" ] 
+                            ]
+                        ]
+                    ]
+                ]
+            ]
 
 
 onEnter : Msg -> Attribute Msg
@@ -431,7 +494,25 @@ update msg model =
             in
                 { model | reports = updatedReports } ! command
 
-        _ ->
+        Calendar message ->
+            let
+                ( cModel, cCmd ) =
+                    Calendar.update message model.calendar
+            in
+                case message of
+                    Calendar.SelectDate date ->
+                        { model | calendar = cModel, selectedDate = date, modalVisible = not model.modalVisible } ! [ Cmd.map Calendar cCmd, weekReports date ]
+
+                    _ ->
+                        { model | calendar = cModel } ! [ Cmd.map Calendar cCmd ]
+
+        ToggleModal ->
+            { model | modalVisible = not model.modalVisible } ! []
+
+        Focus _ ->
+            model ! []
+
+        PutReport _ ->
             model ! []
 
 
@@ -471,22 +552,6 @@ initDate =
     Task.perform SetDate Date.now
 
 
-
--- weekReports : Date.Date -> Cmd Msg
--- weekReports date =
---     let
---         week =
---             toString <| Date.Extra.weekNumber date
---         year =
---             toString <| Date.year date
---         url =
---             "/api/timereport?year=" ++ year ++ "&week=" ++ week
---         request =
---             Http.get reportsDecoder url
---     in
---         Task.perform (\_ -> AddRows []) AddRows request
-
-
 weekReports : Date -> Cmd Msg
 weekReports date =
     let
@@ -505,28 +570,9 @@ weekReports date =
         Http.send AddRows request
 
 
-
--- putReport : Report -> Cmd Msg
--- putReport report =
---     let
---         body =
---             reportEncoder report
---         request =
---             Http.send Http.defaultSettings
---                 { verb = "PUT"
---                 , headers = [ ( "Content-Type", "application/json" ) ]
---                 , url = "/api/timereport/" ++ report.id
---                 , body = Http.string body
---                 }
---     in
---         Task.perform (\_ -> NoOp) (\_ -> NoOp) request
-
-
 putReport : Report -> Cmd Msg
 putReport { id, arrival, leave, lunch, total } =
     let
-        -- body =
-        --     reportEncoder report
         toUtc timestamp =
             Date.Extra.toUtcIsoString <| Date.fromTime <| toFloat timestamp
 
