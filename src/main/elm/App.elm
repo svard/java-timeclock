@@ -1,10 +1,8 @@
 module App exposing (..)
 
-import Html exposing (Html)
-import Html.App
+import Html
 import Navigation
-import UrlParser exposing (Parser, format, oneOf, s, parse)
-import String
+import UrlParser exposing (Parser, map, oneOf, s, parseHash)
 import Timeclock
 import Statistics
 
@@ -13,6 +11,7 @@ type Msg
     = NoOp
     | MainPage Timeclock.Msg
     | StatisticsPage Statistics.Msg
+    | ChangeRoute Navigation.Location
 
 
 type Route
@@ -31,24 +30,22 @@ type alias Model =
 matchers : Parser (Route -> a) a
 matchers =
     oneOf
-        [ format MainRoute (s "main")
-        , format StatisticsRoute (s "statistics")
+        [ map MainRoute (s "main")
+        , map StatisticsRoute (s "statistics")
         ]
 
 
-hashParser : Navigation.Location -> Result String Route
-hashParser location =
-    location.hash
-        |> String.dropLeft 1
-        |> parse identity matchers
+parser : Navigation.Location -> Route
+parser location =
+    case parseHash matchers location of
+        Just route ->
+            route
+
+        Nothing ->
+            NotFoundRoute
 
 
-parser : Navigation.Parser (Result String Route)
-parser =
-    Navigation.makeParser hashParser
-
-
-init : Result String Route -> ( Model, Cmd Msg )
+init : Navigation.Location -> ( Model, Cmd Msg )
 init _ =
     { route = MainRoute
     , timeclock = Timeclock.initialModel
@@ -57,17 +54,17 @@ init _ =
         ! [ Navigation.newUrl "#main" ]
 
 
-view : Model -> Html Msg
+view : Model -> Html.Html Msg
 view model =
     case model.route of
         MainRoute ->
-            Html.App.map MainPage (Timeclock.view model.timeclock)
+            Html.map MainPage (Timeclock.view model.timeclock)
 
         StatisticsRoute ->
-            Html.App.map StatisticsPage (Statistics.view model.statistics)
+            Html.map StatisticsPage (Statistics.view model.statistics)
 
         NotFoundRoute ->
-            Html.App.map MainPage (Timeclock.view model.timeclock)
+            Html.map MainPage (Timeclock.view model.timeclock)
 
 
 routeToCmd : Route -> Cmd Msg
@@ -81,16 +78,6 @@ routeToCmd route =
 
         NotFoundRoute ->
             Cmd.none
-
-
-urlUpdate : Result String Route -> Model -> ( Model, Cmd Msg )
-urlUpdate result model =
-    case result of
-        Err _ ->
-            { model | route = NotFoundRoute } ! []
-
-        Ok route ->
-            { model | route = route } ! [ routeToCmd route ]
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -113,13 +100,19 @@ update message model =
         NoOp ->
             model ! []
 
+        ChangeRoute location ->
+            let
+                route =
+                    parser location
+            in
+                { model | route = route } ! [ routeToCmd route ]
 
-main : Program Never
+
+main : Program Never Model Msg
 main =
-    Navigation.program parser
+    Navigation.program ChangeRoute
         { init = init
         , update = update
-        , urlUpdate = urlUpdate
         , view = view
         , subscriptions = (\_ -> Sub.none)
         }

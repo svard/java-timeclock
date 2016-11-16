@@ -1,0 +1,12 @@
+logging:
+  level:
+    root: INFO
+    net:
+      svard: DEBUG
+
+spring:
+  data:
+    mongodb:
+      host: "127.0.0.1"
+      port: 27017
+      database: "worktime_manager"

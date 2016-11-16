@@ -5,11 +5,11 @@ import Html.Attributes as Attr exposing (..)
 import Html.Events exposing (..)
 import Dom
 import List
-import Date
+import Date exposing (Date)
 import Date.Extra
 import Task
 import Http
-import Json.Decode exposing ((:=))
+import Json.Decode exposing (field)
 import Json.Encode
 
 
@@ -37,7 +37,7 @@ type alias Report =
 
 
 type alias Model =
-    { selectedDate : Date.Date
+    { selectedDate : Date
     , reports : List Report
     }
 
@@ -48,13 +48,15 @@ type alias Model =
 
 type Msg
     = NoOp
-    | SetDate Date.Date
+    | SetDate Date
     | IncrementWeek
     | DecrementWeek
-    | AddRows (List Report)
+    | AddRows (Result Http.Error (List Report))
     | EditTime ID ( Bool, Bool )
     | UpdateTime ID String
     | Save ID ( Bool, Bool )
+    | PutReport (Result Http.Error ())
+    | Focus (Result Dom.Error ())
 
 
 initialModel : Model
@@ -127,7 +129,7 @@ rowView { id, arrival, leave, lunch, total, editing, update } =
             formatTime leave
 
         diff =
-            round' (totalHours - workDay)
+            round_ (totalHours - workDay)
 
         halfDay =
             ceil (totalHours / 2)
@@ -197,7 +199,7 @@ sumRowView model =
                 |> (*) workDay
 
         diff =
-            round' (totalWorkHours - targetHours)
+            round_ (totalWorkHours - targetHours)
     in
         tr
             [ class "c-table__row tc-sum-row" ]
@@ -241,17 +243,17 @@ onEnter msg =
         on "keydown" (Json.Decode.map tagger keyCode)
 
 
-incrWeek : Date.Date -> Date.Date
+incrWeek : Date -> Date
 incrWeek date =
     Date.Extra.add Date.Extra.Week 1 date
 
 
-decrWeek : Date.Date -> Date.Date
+decrWeek : Date -> Date
 decrWeek date =
     Date.Extra.add Date.Extra.Week -1 date
 
 
-weekYear : Date.Date -> String
+weekYear : Date -> String
 weekYear date =
     Date.Extra.toFormattedString "w yyyy" date
 
@@ -282,8 +284,8 @@ ceil number =
         numerator / 100
 
 
-round' : Float -> Float
-round' number =
+round_ : Float -> Float
+round_ number =
     let
         numerator =
             (number * 100)
@@ -343,8 +345,11 @@ update msg model =
             in
                 { model | selectedDate = newWeek } ! [ weekReports newWeek ]
 
-        AddRows reports ->
+        AddRows (Ok reports) ->
             { model | reports = reports } ! []
+
+        AddRows (Err _) ->
+            model ! []
 
         EditTime id isEditing ->
             let
@@ -365,7 +370,7 @@ update msg model =
                 focus =
                     Dom.focus <| "tc-" ++ id
             in
-                { model | reports = List.map updateReport model.reports } ! [ Task.perform (\_ -> NoOp) (\_ -> NoOp) focus ]
+                { model | reports = List.map updateReport model.reports } ! [ Task.attempt Focus focus ]
 
         UpdateTime id time ->
             let
@@ -426,16 +431,19 @@ update msg model =
             in
                 { model | reports = updatedReports } ! command
 
+        _ ->
+            model ! []
+
 
 reportsDecoder : Json.Decode.Decoder (List Report)
 reportsDecoder =
     Json.Decode.list <|
-        Json.Decode.object7 Report
-            ("id" := Json.Decode.string)
-            ("arrival" := Json.Decode.int)
-            ("leave" := Json.Decode.int)
-            ("lunch" := Json.Decode.int)
-            ("total" := Json.Decode.int)
+        Json.Decode.map7 Report
+            (field "id" Json.Decode.string)
+            (field "arrival" Json.Decode.int)
+            (field "leave" Json.Decode.int)
+            (field "lunch" Json.Decode.int)
+            (field "total" Json.Decode.int)
             (Json.Decode.succeed ( False, False ))
             (Json.Decode.succeed "")
 
@@ -460,10 +468,26 @@ reportEncoder { id, arrival, leave, lunch, total } =
 
 initDate : Cmd Msg
 initDate =
-    Task.perform (\_ -> SetDate (Date.fromTime 0)) SetDate Date.now
+    Task.perform SetDate Date.now
 
 
-weekReports : Date.Date -> Cmd Msg
+
+-- weekReports : Date.Date -> Cmd Msg
+-- weekReports date =
+--     let
+--         week =
+--             toString <| Date.Extra.weekNumber date
+--         year =
+--             toString <| Date.year date
+--         url =
+--             "/api/timereport?year=" ++ year ++ "&week=" ++ week
+--         request =
+--             Http.get reportsDecoder url
+--     in
+--         Task.perform (\_ -> AddRows []) AddRows request
+
+
+weekReports : Date -> Cmd Msg
 weekReports date =
     let
         week =
@@ -476,23 +500,54 @@ weekReports date =
             "/api/timereport?year=" ++ year ++ "&week=" ++ week
 
         request =
-            Http.get reportsDecoder url
+            Http.get url reportsDecoder
     in
-        Task.perform (\_ -> AddRows []) AddRows request
+        Http.send AddRows request
+
+
+
+-- putReport : Report -> Cmd Msg
+-- putReport report =
+--     let
+--         body =
+--             reportEncoder report
+--         request =
+--             Http.send Http.defaultSettings
+--                 { verb = "PUT"
+--                 , headers = [ ( "Content-Type", "application/json" ) ]
+--                 , url = "/api/timereport/" ++ report.id
+--                 , body = Http.string body
+--                 }
+--     in
+--         Task.perform (\_ -> NoOp) (\_ -> NoOp) request
 
 
 putReport : Report -> Cmd Msg
-putReport report =
+putReport { id, arrival, leave, lunch, total } =
     let
-        body =
-            reportEncoder report
+        -- body =
+        --     reportEncoder report
+        toUtc timestamp =
+            Date.Extra.toUtcIsoString <| Date.fromTime <| toFloat timestamp
+
+        report =
+            Json.Encode.object
+                [ ( "id", Json.Encode.string id )
+                , ( "arrival", Json.Encode.string <| toUtc arrival )
+                , ( "leave", Json.Encode.string <| toUtc leave )
+                , ( "lunch", Json.Encode.int lunch )
+                , ( "total", Json.Encode.int total )
+                ]
 
         request =
-            Http.send Http.defaultSettings
-                { verb = "PUT"
-                , headers = [ ( "Content-Type", "application/json" ) ]
-                , url = "/api/timereport/" ++ report.id
-                , body = Http.string body
+            Http.request
+                { method = "PUT"
+                , headers = []
+                , url = "/api/timereport/" ++ id
+                , body = Http.jsonBody report
+                , expect = Http.expectStringResponse (\_ -> Ok ())
+                , timeout = Nothing
+                , withCredentials = False
                 }
     in
-        Task.perform (\_ -> NoOp) (\_ -> NoOp) request
+        Http.send PutReport request

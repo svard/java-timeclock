@@ -28,7 +28,7 @@ sourceSets {
 
 jar {
 	baseName = 'timeclock'
-	version = '2.0.1'
+	version = '2.0.2'
 }
 
 sourceCompatibility = 1.8
@@ -50,9 +50,22 @@ configurations {
 }
 
 task integrationTest(type: Test) {
+    dependsOn integrationTestClasses
     testClassesDir = sourceSets.integrationTest.output.classesDir
-    classpath = sourceSets.integrationTest.runtimeClasspath
+    classpath = sourceSets.integrationTest.runtimeClasspath + sourceSets.main.output
     outputs.upToDateWhen { false }
+}
+
+test {
+    testLogging {
+        events "PASSED", "STARTED", "FAILED", "SKIPPED"
+    }
+}
+
+integrationTest {
+    testLogging {
+        events "PASSED", "STARTED", "FAILED", "SKIPPED"
+    }
 }
 
 dependencies {

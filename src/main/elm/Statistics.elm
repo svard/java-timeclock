@@ -2,8 +2,7 @@ module Statistics exposing (Msg, Model, initialModel, view, update, loadStats)
 
 import Html exposing (..)
 import Html.Attributes as Attr exposing (..)
-import Json.Decode as Json exposing ((:=))
-import Task
+import Json.Decode as Json exposing (field)
 import Http
 import Date
 import Date.Extra
@@ -11,7 +10,7 @@ import Date.Extra
 
 type Msg
     = NoOp
-    | AddYears (List YearStats)
+    | AddYears (Result Http.Error (List YearStats))
 
 
 type alias Record =
@@ -35,20 +34,20 @@ type alias Model =
 
 recordDecoder : Json.Decoder Record
 recordDecoder =
-    Json.object2 Record
-        ("time" := Json.float)
-        ("date" := Json.float)
+    Json.map2 Record
+        (field "time" Json.float)
+        (field "date" Json.float)
 
 
 statsDecoder : Json.Decoder (List YearStats)
 statsDecoder =
     Json.list <|
-        Json.object5 YearStats
-            ("id" := Json.int)
-            ("sum" := Json.float)
-            ("avg" := Json.float)
-            ("shortest" := recordDecoder)
-            ("longest" := recordDecoder)
+        Json.map5 YearStats
+            (field "id" Json.int)
+            (field "sum" Json.float)
+            (field "avg" Json.float)
+            (field "shortest" recordDecoder)
+            (field "longest" recordDecoder)
 
 
 loadStats : Cmd Msg
@@ -58,9 +57,9 @@ loadStats =
             "/api/statistics"
 
         request =
-            Http.get statsDecoder url
+            Http.get url statsDecoder
     in
-        Task.perform (\_ -> AddYears []) AddYears request
+        Http.send AddYears request
 
 
 initialModel : Model
@@ -109,7 +108,7 @@ rowView { year, sum, avg, shortest, longest } =
     let
         toHours ts =
             toString <| timestampToHours ts
-            
+
         toDate date =
             Date.Extra.toFormattedString "MMM ddd" <| Date.fromTime date
     in
@@ -125,11 +124,11 @@ rowView { year, sum, avg, shortest, longest } =
 
 timestampToHours : Float -> Float
 timestampToHours ts =
-    round' (((ts * 100) / 3600) / 100)
+    round_ (((ts * 100) / 3600) / 100)
 
 
-round' : Float -> Float
-round' number =
+round_ : Float -> Float
+round_ number =
     let
         numerator =
             (number * 100)
@@ -145,5 +144,8 @@ update msg model =
         NoOp ->
             model ! []
 
-        AddYears years ->
+        AddYears (Ok years) ->
             { model | years = years } ! []
+
+        AddYears (Err _) ->
+            model ! []
