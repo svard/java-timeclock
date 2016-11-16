@@ -82,10 +82,16 @@ public class TimeReportControllerTest {
         report.setLunch(3600);
         report.setTotal(28892);
 
+        Report insertedReport = new Report();
+        insertedReport.setId("123");
+
+        Mockito.when(reportRepository.insert(Mockito.any(Report.class))).thenReturn(insertedReport);
+
         mockMvc.perform(
                 post("/api/timereport")
                         .contentType(MediaType.APPLICATION_JSON_UTF8)
-                        .content("{\"total\":28892,\"lunch\":3600,\"arrival\":1408340911000,\"leave\":1408373403000}"));
+                        .content("{\"workTime\":28892,\"lunchTime\":3600,\"arrivalTime\":1408340911000,\"leaveTime\":1408373403000}"))
+        .andExpect(status().isCreated());
 
         Mockito.verify(reportRepository).insert(report);
     }

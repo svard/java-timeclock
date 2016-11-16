@@ -8,8 +8,11 @@ import net.svard.repositories.ReportRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
+import java.net.URI;
 import java.util.Date;
 import java.util.List;
 
@@ -57,7 +60,7 @@ public class TimeReportController {
     }
 
     @RequestMapping(method = RequestMethod.POST, consumes = MediaType.APPLICATION_JSON_UTF8_VALUE)
-    public Report insertReport(@RequestBody ClientReport clientReport) {
+    public ResponseEntity<Void> insertReport(@RequestBody ClientReport clientReport) {
         log.info("Client posted report {}", clientReport.toString());
 
         Report report = new Report();
@@ -70,7 +73,10 @@ public class TimeReportController {
 
         log.info("Inserted new report {}", insertedReport.toString());
 
-        return insertedReport;
+        URI location = ServletUriComponentsBuilder.fromCurrentRequest()
+                .path("/{id}").buildAndExpand(insertedReport.getId()).toUri();
+
+        return ResponseEntity.created(location).build();
     }
 
     @RequestMapping(value = "/{id}", method = RequestMethod.PUT, consumes = MediaType.APPLICATION_JSON_UTF8_VALUE)
