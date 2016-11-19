@@ -4,6 +4,9 @@ jdk:
   - oraclejdk8
 
 before_install:
+  - npm install webpack elm@0.18
+  - npm install
+  - elm-package install
   - chmod +x ./gradlew
 
 script:
