@@ -28,7 +28,7 @@ sourceSets {
 
 jar {
 	baseName = 'timeclock'
-	version = '2.0.2'
+	version = '2.0.3'
 }
 
 sourceCompatibility = 1.8
@@ -55,6 +55,13 @@ task integrationTest(type: Test) {
     classpath = sourceSets.integrationTest.runtimeClasspath + sourceSets.main.output
     outputs.upToDateWhen { false }
 }
+
+task webpack(type: Exec) {
+    String cmd = 'npm run build'
+    commandLine cmd.split(' ')
+}
+
+assemble.dependsOn webpack
 
 test {
     testLogging {
