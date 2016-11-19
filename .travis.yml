@@ -3,7 +3,14 @@ language: java
 jdk:
   - oraclejdk8
 
+node_js:
+  - "5"
+
 before_install:
+  - nvm install 5
+  - nvm use 5
+  - node --version
+  - npm --version
   - npm install -g webpack elm@0.18
   - npm install
   - elm-package install -y
