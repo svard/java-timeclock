@@ -27,6 +27,7 @@ import static org.springframework.test.web.servlet.setup.MockMvcBuilders.standal
 public class TimeReportControllerTest {
     @MockBean
     private ReportRepository reportRepository;
+
     @Autowired
     private TimeReportController controller;
 

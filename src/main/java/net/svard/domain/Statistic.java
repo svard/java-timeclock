@@ -1,14 +1,11 @@
 package net.svard.domain;
 
 import org.springframework.data.annotation.Id;
-import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.util.Date;
 
-@Document(collection = "reports")
 public class Statistic {
     @Id
-//    @Field("_id")
     private int id;
 
     private long sum;
@@ -39,6 +36,14 @@ public class Statistic {
 
         public long getTime() {
             return time;
+        }
+
+        @Override
+        public String toString() {
+            return "Record{" +
+                    "date=" + date +
+                    ", time=" + time +
+                    '}';
         }
     }
 
@@ -88,5 +93,16 @@ public class Statistic {
 
     public Record getShortest() {
         return new Record(shortestDate, shortestTime);
+    }
+
+    @Override
+    public String toString() {
+        return "Statistic{" +
+                "id=" + id +
+                ", sum=" + sum +
+                ", avg=" + avg +
+                ", shortest=" + getShortest() +
+                ", longest=" + getLongest() +
+                '}';
     }
 }

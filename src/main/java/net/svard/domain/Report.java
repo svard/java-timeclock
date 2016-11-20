@@ -80,19 +80,17 @@ public class Report {
 
         if (total != report.total) return false;
         if (lunch != report.lunch) return false;
-        if (id != null ? !id.equals(report.id) : report.id != null) return false;
-        if (arrival != null ? !arrival.equals(report.arrival) : report.arrival != null) return false;
-        return leave != null ? leave.equals(report.leave) : report.leave == null;
+        if (!arrival.equals(report.arrival)) return false;
+        return leave.equals(report.leave);
 
     }
 
     @Override
     public int hashCode() {
-        int result = id != null ? id.hashCode() : 0;
-        result = 31 * result + (int) (total ^ (total >>> 32));
+        int result = (int) (total ^ (total >>> 32));
         result = 31 * result + (int) (lunch ^ (lunch >>> 32));
-        result = 31 * result + (arrival != null ? arrival.hashCode() : 0);
-        result = 31 * result + (leave != null ? leave.hashCode() : 0);
+        result = 31 * result + arrival.hashCode();
+        result = 31 * result + leave.hashCode();
         return result;
     }
 }
