@@ -27,15 +27,6 @@
     max-width: 15px;
 }
 
-.tc-nav-buttons {
-    margin-top: 12px;
-    text-align: center;
-}
-
-.tc-nav-buttons > button {
-    margin-right: 1em;
-}
-
 .tc-button-icon {
     padding: 0 1em;
 }
@@ -59,6 +50,6 @@
     width: auto;
 }
 
-.tc-calendar-modal-button {
+.tc-calendar-modal footer button {
     width: 100%;
 }

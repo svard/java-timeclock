@@ -234,22 +234,28 @@ sumRowView model =
 navButtonView : Html Msg
 navButtonView =
     div
-        [ class "tc-nav-buttons" ]
-        [ button
-            [ class "c-button c-button--rounded c-button--ghost-primary c-button--small u-high"
-            , onClick DecrementWeek
+        [ class "u-center-block" ]
+        [ div
+            [ class "u-center-block__content u-center-block__content--horizontal" ]
+            [ span
+                [ class "c-input-group c-input-group--rounded u-letter-box--large" ]
+                [ button
+                    [ class "c-button c-button--rounded c-button--small"
+                    , onClick DecrementWeek
+                    ]
+                    [ i [ class "fa fa-chevron-left tc-button-icon" ] [] ]
+                , button
+                    [ class "c-button c-button--rounded c-button--small"
+                    , onClick ToggleModal
+                    ]
+                    [ i [ class "fa fa-calendar tc-button-icon" ] [] ]
+                , button
+                    [ class "c-button c-button--rounded c-button--small"
+                    , onClick IncrementWeek
+                    ]
+                    [ i [ class "fa fa-chevron-right tc-button-icon" ] [] ]
+                ]
             ]
-            [ i [ class "fa fa-chevron-left tc-button-icon" ] [] ]
-        , button
-            [ class "c-button c-button--rounded c-button--ghost-primary c-button--small u-high"
-            , onClick ToggleModal
-            ]
-            [ i [ class "fa fa-calendar tc-button-icon" ] [] ]
-        , button
-            [ class "c-button c-button--rounded c-button--ghost-primary c-button--small u-high"
-            , onClick IncrementWeek
-            ]
-            [ i [ class "fa fa-chevron-right tc-button-icon" ] [] ]
         ]
 
 
@@ -257,36 +263,41 @@ calendarModal : Model -> Html Msg
 calendarModal model =
     let
         boolToDisplay bool =
-            if bool then "block" else "none" 
+            if bool then
+                "block"
+            else
+                "none"
     in
         div
             [ class "o-grid"
-            , style [ ("display", boolToDisplay model.modalVisible ) ] ]
+            , style [ ( "display", boolToDisplay model.modalVisible ) ]
+            ]
             [ div [ class "c-overlay" ] []
-            , div 
+            , div
                 [ class "o-grid__cell tc-calendar-modal" ]
                 [ div
                     [ class "o-modal u-higher" ]
-                    [ div 
+                    [ div
                         [ class "c-card" ]
-                        [ header 
+                        [ header
                             [ class "c-card__header" ]
-                            [ button 
-                                [ class "c-button c-button--close" 
+                            [ button
+                                [ class "c-button c-button--close"
                                 , onClick ToggleModal
-                                ] 
+                                ]
                                 [ text "×" ]
-                            , h2 [ class "c-heading" ] [ text "Select week" ] ]
-                        , div 
+                            , h2 [ class "c-heading" ] [ text "Select week" ]
+                            ]
+                        , div
                             [ class "c-card__body" ]
                             [ Html.map Calendar (Calendar.view model.calendar) ]
-                        , footer 
+                        , footer
                             [ class "c-card__footer" ]
-                            [ button 
-                                [ class "c-button c-button--brand modal tc-calendar-modal-button"
+                            [ button
+                                [ class "c-button c-button--brand modal"
                                 , onClick ToggleModal
-                                ] 
-                                [ text "Close" ] 
+                                ]
+                                [ text "Close" ]
                             ]
                         ]
                     ]
