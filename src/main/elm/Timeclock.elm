@@ -3,10 +3,6 @@ module Timeclock exposing (Msg, Model, initialModel, initDate, view, update)
 import Html exposing (..)
 import Html.Attributes as Attr exposing (..)
 import Html.Events exposing (..)
-
-
--- import Html.App
-
 import Dom
 import List
 import Date exposing (Date)
@@ -32,10 +28,15 @@ type alias Report =
     , leave : Timestamp
     , lunch : Int
     , total : Int
-    , editing : ( Bool, Bool )
+    , editing : Maybe EditingCell
     , update : String
     }
 
+
+type EditingCell 
+    = Arrive
+    | Leave
+    | Lunch
 
 
 -- MODEL
@@ -59,9 +60,9 @@ type Msg
     | IncrementWeek
     | DecrementWeek
     | AddRows (Result Http.Error (List Report))
-    | EditTime ID ( Bool, Bool )
+    | EditTime ID (Maybe EditingCell)
     | UpdateTime ID String
-    | Save ID ( Bool, Bool )
+    | Save ID EditingCell
     | PutReport (Result Http.Error ())
     | Focus (Result Dom.Error ())
     | Calendar Calendar.Msg
@@ -151,27 +152,34 @@ rowView { id, arrival, leave, lunch, total, editing, update } =
         halfDay =
             ceil (totalHours / 2)
 
-        ( editFrom, editTo ) =
-            editing
-
-        editable time isEditing =
-            if isEditing then
-                input
-                    [ Attr.id ("tc-" ++ id)
-                    , classList
-                        [ ( "c-field", True )
-                        , ( "c-field--small", True )
-                        , ( "c-field--error", not <| isValidDateTime date update )
+        editable : String -> Bool -> EditingCell -> Html Msg
+        editable time isEditing field =
+            let 
+                validInput =
+                    case field of
+                        Lunch ->
+                            not (isValidFloat update)
+                            
+                        _ ->
+                            not (isValidDateTime date update)
+            in
+                if isEditing then
+                    input
+                        [ Attr.id ("tc-" ++ id)
+                        , classList
+                            [ ( "c-field", True )
+                            , ( "c-field--small", True )
+                            , ( "c-field--error", validInput )
+                            ]
+                        , value update
+                        , autofocus True
+                        , onBlur (EditTime id Nothing)
+                        , onInput (UpdateTime id)
+                        , onEnter (Save id field)
                         ]
-                    , value update
-                    , autofocus True
-                    , onBlur (EditTime id ( False, False ))
-                    , onInput (UpdateTime id)
-                    , onEnter (Save id editing)
-                    ]
-                    []
-            else
-                text <| time
+                        []
+                else
+                    text time
     in
         tr
             [ class "c-table__row" ]
@@ -187,15 +195,19 @@ rowView { id, arrival, leave, lunch, total, editing, update } =
             , td [ class "c-table__cell" ] [ text date ]
             , td
                 [ class "c-table__cell"
-                , onDoubleClick (EditTime id ( True, False ))
+                , onDoubleClick (EditTime id (Just Arrive))
                 ]
-                [ editable from editFrom ]
+                [ editable from (editing == Just Arrive) Arrive ]
             , td
                 [ class "c-table__cell"
-                , onDoubleClick (EditTime id ( False, True ))
+                , onDoubleClick (EditTime id (Just Leave))
                 ]
-                [ editable to editTo ]
-            , td [ class "c-table__cell" ] [ text <| toString lunchHours ]
+                [ editable to (editing == Just Leave) Leave ]
+            , td 
+                [ class "c-table__cell"
+                , onDoubleClick (EditTime id (Just Lunch)) 
+                ] 
+                [ editable (toString lunchHours) (editing == Just Lunch) Lunch ]
             , td [ class "c-table__cell" ] [ text <| toString totalHours ]
             , td [ class "c-table__cell" ] [ text <| toString halfDay ]
             , td [ class "c-table__cell" ] [ text <| prefixSign diff ]
@@ -392,6 +404,15 @@ isValidDateTime date time =
             False
 
 
+isValidFloat : String -> Bool
+isValidFloat input =
+    case String.toFloat input of
+        Ok _ ->
+            True
+
+        Err _ ->
+            False
+
 
 -- UPDATE
 
@@ -425,19 +446,29 @@ update msg model =
         AddRows (Err _) ->
             model ! []
 
-        EditTime id isEditing ->
+        EditTime id (Just field) ->
             let
+                updateReport : Report -> Report
                 updateReport t =
                     if t.id == id then
-                        case isEditing of
-                            ( True, False ) ->
-                                { t | editing = isEditing, update = formatTime t.arrival }
+                        case field of
+                            Arrive ->
+                                { t
+                                    | editing = Just field
+                                    , update = formatTime t.arrival
+                                }
 
-                            ( False, True ) ->
-                                { t | editing = isEditing, update = formatTime t.leave }
+                            Leave ->
+                                { t
+                                    | editing = Just field
+                                    , update = formatTime t.leave
+                                }
 
-                            _ ->
-                                { t | editing = isEditing }
+                            Lunch ->
+                                { t
+                                    | editing = Just field
+                                    , update = t.lunch |> timestampToHours |> toString
+                                }
                     else
                         t
 
@@ -446,8 +477,16 @@ update msg model =
             in
                 { model | reports = List.map updateReport model.reports } ! [ Task.attempt Focus focus ]
 
+        EditTime id Nothing ->
+            let
+                focus =
+                    Dom.focus <| "tc-" ++ id
+            in
+                { model | reports = List.map (\r -> { r | editing = Nothing } ) model.reports } ! [ Task.attempt Focus focus ]
+
         UpdateTime id time ->
             let
+                updateReport : Report -> Report
                 updateReport t =
                     if t.id == id then
                         { t | update = time }
@@ -458,6 +497,7 @@ update msg model =
 
         Save id isEditing ->
             let
+                toTimestamp : String -> String -> Int
                 toTimestamp date time =
                     case Date.fromString (date ++ " " ++ time) of
                         Ok timestamp ->
@@ -466,25 +506,44 @@ update msg model =
                         Err _ ->
                             0
 
+                updateReport : Report -> Report
                 updateReport t =
                     if t.id == id then
                         case isEditing of
-                            ( True, False ) ->
+                            Arrive ->
                                 let
                                     arrival =
                                         toTimestamp (formatDate t.arrival) t.update
                                 in
-                                    { t | arrival = arrival, total = (t.leave - arrival - (t.lunch * 1000)) // 1000, editing = ( False, False ) }
+                                    { t
+                                        | arrival = arrival
+                                        , total = (t.leave - arrival - (t.lunch * 1000)) // 1000
+                                        , editing = Nothing
+                                    }
 
-                            ( False, True ) ->
+                            Leave ->
                                 let
                                     leave =
                                         toTimestamp (formatDate t.leave) t.update
                                 in
-                                    { t | leave = leave, total = (leave - t.arrival - (t.lunch * 1000)) // 1000, editing = ( False, False ) }
+                                    { t
+                                        | leave = leave
+                                        , total = (leave - t.arrival - (t.lunch * 1000)) // 1000
+                                        , editing = Nothing
+                                    }
 
-                            _ ->
-                                t
+                            Lunch ->
+                                let
+                                    lunch =
+                                        Result.withDefault 0 (String.toFloat t.update)
+                                            |> (*) 3600
+                                            |> round
+                                in
+                                    { t
+                                        | lunch = lunch
+                                        , total = (t.leave - t.arrival - (lunch * 1000)) // 1000
+                                        , editing = Nothing
+                                    }
                     else
                         t
 
@@ -512,7 +571,12 @@ update msg model =
             in
                 case message of
                     Calendar.SelectDate date ->
-                        { model | calendar = cModel, selectedDate = date, modalVisible = not model.modalVisible } ! [ Cmd.map Calendar cCmd, weekReports date ]
+                        { model
+                            | calendar = cModel
+                            , selectedDate = date
+                            , modalVisible = not model.modalVisible
+                        }
+                            ! [ Cmd.map Calendar cCmd, weekReports date ]
 
                     _ ->
                         { model | calendar = cModel } ! [ Cmd.map Calendar cCmd ]
@@ -536,7 +600,7 @@ reportsDecoder =
             (field "leave" Json.Decode.int)
             (field "lunch" Json.Decode.int)
             (field "total" Json.Decode.int)
-            (Json.Decode.succeed ( False, False ))
+            (Json.Decode.succeed Nothing)
             (Json.Decode.succeed "")
 
 
